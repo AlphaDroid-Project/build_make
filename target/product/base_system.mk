@@ -536,7 +536,7 @@ PRODUCT_PACKAGES_DEBUG := \
     unwind_reg_info \
     unwind_symbols \
 
-ifeq ($(LINEAGE_BUILD),)
+ifeq ($(ALPHA_BUILD),)
 PRODUCT_PACKAGES_DEBUG += \
     su
 endif

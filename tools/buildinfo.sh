@@ -56,5 +56,6 @@ fi
 
 echo "ro.lineage.device=$LINEAGE_DEVICE"
 echo "ro.crdroid.device=$LINEAGE_DEVICE"
+echo "ro.alpha.device=$LINEAGE_DEVICE"
 
 echo "# end build properties"

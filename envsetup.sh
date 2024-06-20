@@ -822,7 +822,26 @@ function lunch()
     # Split string on the '-' character.
     IFS="-" read -r product release variant <<< "$selection"
 
-    if [[ -z "$product" ]] || [[ -z "$release" ]] || [[ -z "$variant" ]]
+    # make <release> argument optional
+    if [[ -z "$variant" ]]
+    then
+        if [[ -n "$release" ]]
+        then
+            variant=$release
+            if [[ -z "$aosp_target_release" ]]
+            then
+                source ${ANDROID_BUILD_TOP}/vendor/lineage/vars/aosp_target_release
+            fi
+            if [[ -n "$aosp_target_release" ]]
+            then
+                # assume lunch format is 'lunch <product>-<variant>'
+                # and use $aosp_target_release as <release> parameter
+                release=$aosp_target_release
+            fi
+        fi
+    fi
+
+    if [[ -z "$product" ]] || [[ -z "$release" ]]
     then
         echo
         echo "Invalid lunch combo: $selection"

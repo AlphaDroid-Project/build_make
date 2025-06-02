@@ -1057,6 +1057,7 @@ function get_make_command()
 
 function make()
 {
+    vendor/alpha/build/tools/move_previous_builds.sh $OUT
     _wrap_build $(get_make_command "$@") "$@"
 }
 

@@ -459,15 +459,6 @@ function _lunch_meat()
         then
             echo "Did you mean -${product/*_/}? (dash instead of underscore)"
         fi
-        echo
-        echo "** Don't have a product spec for: '$product'"
-        echo "** Do you have the right repo manifest?"
-        product=
-    fi
-
-    if [ -z "$product" -o -z "$variant" ]
-    then
-        echo
         return 1
     fi
     export TARGET_PRODUCT=$(_get_build_var_cached TARGET_PRODUCT)
@@ -496,7 +487,7 @@ function _lunch_meat()
     set_stuff_for_environment
     [[ -n "${ANDROID_QUIET_BUILD:-}" ]] || printconfig
 
-    if [[ -z "${ANDROID_QUIET_BUILD}" && -z "${LINEAGE_BUILD}" ]]; then
+    if [[ -z "${ANDROID_QUIET_BUILD}" && -z "${ALPHA_BUILD}" ]]; then
         local spam_for_lunch=$(gettop)/build/make/tools/envsetup/spam_for_lunch
         if [[ -x $spam_for_lunch ]]; then
             $spam_for_lunch
@@ -582,46 +573,52 @@ function lunch()
         return 1
     fi
 
-    local product release variant
+    local target product release variant
 
     # Handle the legacy format
     local legacy=$(echo $1 | grep "-")
     if [[ $# -eq 1 && -n $legacy ]]; then
-        IFS="-" read -r product release variant <<< "$1"
-        if [[ -z "$product" ]] || [[ -z "$release" ]] || [[ -z "$variant" ]]; then
-            echo "Invalid lunch combo: $1" 1>&2
-            echo "Valid combos must be of the form <product>-<release>-<variant> when using" 1>&2
-            echo "the legacy format.  Run 'lunch --help' for usage." 1>&2
-            return 1
-        fi
+        IFS="-" read -r target release variant <<< "$1"
     fi
 
     # Handle the new format.
     if [[ -z $legacy ]]; then
-        product=$1
+        target=$1
         release=$2
-        if [[ -z $release ]]; then
-            release=trunk_staging
-        fi
         variant=$3
-        if [[ -z $variant ]]; then
-            variant=eng
-        fi
     fi
 
-    if ! check_product $product $release
-    then
-        # if we can't find a product, try to grab it off the LineageOS GitHub
-        T=$(gettop)
-        cd $T > /dev/null
-        vendor/lineage/build/tools/roomservice.py $product
-        cd - > /dev/null
-        check_product $product $release
+    if [[ -z "$target" ]]; then
+        echo "Product not specified." 1>&2
+        echo "Run 'lunch --help' for usage." 1>&2
+        return 1
+    fi
+
+    # Handle lunch with 2 arguments, assuming $2=variant
+    if [[ -n $release && -z $variant ]]; then
+        variant=$release
+        release=
+    fi
+
+    if [[ -z "$release" ]]; then
+        # always pick the latest release (ref: https://github.com/yaap/build_make/blob/c7753b7616c75f020cd1bdb04fda05625d2649cc/envsetup.sh#L523)
+        release=$(grep "BUILD_ID" build/make/core/build_id.mk | tail -1 | cut -d '=' -f 2 | cut -d '.' -f 1 | tr '[:upper:]' '[:lower:]')
+        echo "Automatically selected latest release: ${release}"
+        export TARGET_RELEASE=$release
+    fi
+
+    if  [[ "$target" =~ ^alpha_ ]]; then
+        product=$target
     else
-        T=$(gettop)
-        cd $T > /dev/null
-        vendor/lineage/build/tools/roomservice.py $product true
-        cd - > /dev/null
+        product=alpha_$target
+    fi
+
+    check_product $product $release
+
+    if [[ -z $variant ]]; then
+        variant=user
+        echo "Automatically selected default variant: ${variant}"
+        export TARGET_BUILD_VARIANT=$variant
     fi
 
     # Validate the selection and set all the environment stuff
